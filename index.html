@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#667eea">
+    <meta name="description" content="Roommate Expense Splitter - Track and split expenses easily">
+    <title>RoomSplit - Expense Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loader">
+            <div class="spinner"></div>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <!-- Login Page -->
+    <div id="loginPage" class="page hidden">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="logo">
+                    <i class="fas fa-home"></i>
+                </div>
+                <h1>RoomSplit</h1>
+                <p>Track & Split Expenses with Your Roommate</p>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="loginEmail" placeholder="Email Address" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                    <button type="button" class="toggle-password" onclick="togglePassword()">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">
+                    <span>Login</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </form>
+            
+            <div id="loginError" class="error-message hidden"></div>
+            
+            <div class="login-footer">
+    <p><i class="fas fa-shield-alt"></i> Secure Login</p>
+    <p class="m2-credit">
+        Developed by <a href="https://www.instagram.com/mohin_m2?igsh=MW9sejY4bGRzcWY4bA==" target="_blank">M2Agency</a> ⚡
+    </p>
+</div>
+        </div>
+    </div>
+
+    <!-- Main App (For Tarun & Fazal) -->
+    <div id="mainApp" class="page hidden">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <i class="fas fa-home"></i>
+                    <h1>RoomSplit</h1>
+                </div>
+                <div class="header-right">
+                    <span id="currentUserName" class="user-badge"></span>
+                    <button id="logoutBtn" class="btn btn-icon" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Dashboard Summary Cards -->
+            <section class="dashboard-cards">
+                <div class="card summary-card total">
+                    <div class="card-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Total Spent</h3>
+                        <p class="amount" id="totalExpenses">₹0</p>
+                    </div>
+                </div>
+                
+                <div class="card summary-card your-expense">
+                    <div class="card-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Your Spent</h3>
+                        <p class="amount" id="yourExpenses">₹0</p>
+                    </div>
+                </div>
+                
+                <div class="card summary-card partner-expense">
+                    <div class="card-icon">
+                        <i class="fas fa-user-friends"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Partner Spent</h3>
+                        <p class="amount" id="partnerExpenses">₹0</p>
+                    </div>
+                </div>
+                
+                <div class="card summary-card balance" id="balanceCard">
+                    <div class="card-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Balance</h3>
+                        <p class="amount" id="balanceAmount">₹0</p>
+                        <p class="balance-text" id="balanceText">All settled!</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Navigation Tabs -->
+            <nav class="tab-navigation">
+                <button class="tab-btn active" data-tab="expenses">
+                    <i class="fas fa-receipt"></i>
+                    <span>Expenses</span>
+                </button>
+                <button class="tab-btn" data-tab="add">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add New</span>
+                </button>
+                <button class="tab-btn" data-tab="settle">
+                    <i class="fas fa-handshake"></i>
+                    <span>Settle</span>
+                </button>
+                <button class="tab-btn" data-tab="history">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </button>
+            </nav>
+
+            <!-- Tab Contents -->
+            <div class="tab-contents">
+                <!-- Expenses Tab -->
+                <div id="expensesTab" class="tab-content active">
+                    <div class="section-header">
+                        <h2><i class="fas fa-list"></i> Recent Expenses</h2>
+                        <div class="filter-group">
+                            <select id="filterCategory" class="filter-select">
+                                <option value="all">All Categories</option>
+                                <option value="Grocery">🛒 Grocery</option>
+                                <option value="Rent">🏠 Rent</option>
+                                <option value="Utilities">💡 Utilities</option>
+                                <option value="Food">🍕 Food</option>
+                                <option value="Transport">🚗 Transport</option>
+                                <option value="Entertainment">🎬 Entertainment</option>
+                                <option value="Medical">💊 Medical</option>
+                                <option value="Other">📦 Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="expensesList" class="expenses-list">
+                        <div class="empty-state">
+                            <i class="fas fa-receipt"></i>
+                            <p>No expenses yet. Add your first expense!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Expense Tab -->
+                <div id="addTab" class="tab-content">
+                    <div class="section-header">
+                        <h2><i class="fas fa-plus-circle"></i> Add New Expense</h2>
+                    </div>
+                    
+                    <form id="expenseForm" class="expense-form">
+                        <div class="form-group">
+                            <label for="expenseAmount">
+                                <i class="fas fa-rupee-sign"></i> Amount
+                            </label>
+                            <input 
+                                type="number" 
+                                id="expenseAmount" 
+                                placeholder="Enter amount" 
+                                min="1" 
+                                step="0.01"
+                                required
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="expenseCategory">
+                                <i class="fas fa-tag"></i> Category
+                            </label>
+                            <select id="expenseCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="Grocery">🛒 Grocery</option>
+                                <option value="Rent">🏠 Rent</option>
+                                <option value="Utilities">💡 Utilities</option>
+                                <option value="Food">🍕 Food</option>
+                                <option value="Transport">🚗 Transport</option>
+                                <option value="Entertainment">🎬 Entertainment</option>
+                                <option value="Medical">💊 Medical</option>
+                                <option value="Other">📦 Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="expenseDescription">
+                                <i class="fas fa-pencil-alt"></i> Description
+                            </label>
+                            <input 
+                                type="text" 
+                                id="expenseDescription" 
+                                placeholder="What was this expense for?"
+                                maxlength="100"
+                            >
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-user-check"></i> Paid By
+                            </label>
+                            <div class="paid-by-display" id="paidByDisplay">
+                                <i class="fas fa-user-circle"></i>
+                                <span>You</span>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-full">
+                            <i class="fas fa-plus"></i>
+                            <span>Add Expense</span>
+                        </button>
+                    </form>
+                    
+                    <!-- Quick Add Buttons -->
+                    <div class="quick-add-section">
+                        <h3>Quick Add</h3>
+                        <div class="quick-add-buttons">
+                            <button class="quick-btn" data-amount="50" data-category="Food">
+                                🍕 ₹50 Food
+                            </button>
+                            <button class="quick-btn" data-amount="100" data-category="Grocery">
+                                🛒 ₹100 Grocery
+                            </button>
+                            <button class="quick-btn" data-amount="200" data-category="Utilities">
+                                💡 ₹200 Utilities
+                            </button>
+                            <button class="quick-btn" data-amount="500" data-category="Rent">
+                                🏠 ₹500 Rent
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settle Tab -->
+                <div id="settleTab" class="tab-content">
+                    <div class="section-header">
+                        <h2><i class="fas fa-handshake"></i> Settlement</h2>
+                    </div>
+                    
+                    <!-- Pending Settlement -->
+                    <div class="settle-section">
+                        <div class="settle-card" id="pendingSettlement">
+                            <div class="settle-header">
+                                <h3><i class="fas fa-clock"></i> Pending Settlement</h3>
+                            </div>
+                            <div class="settle-body">
+                                <div class="settle-summary">
+                                    <div class="user-expense">
+                                        <span class="label" id="settleUserAName">User A</span>
+                                        <span class="value" id="settleUserAPaid">₹0</span>
+                                    </div>
+                                    <div class="vs-divider">
+                                        <span>VS</span>
+                                    </div>
+                                    <div class="user-expense">
+                                        <span class="label" id="settleUserBName">User B</span>
+                                        <span class="value" id="settleUserBPaid">₹0</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="settle-result" id="settleResult">
+                                    <div class="result-icon">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    <p class="result-text">All expenses are settled!</p>
+                                </div>
+                                
+                                <div class="settle-calculation">
+                                    <div class="calc-row">
+                                        <span>Total Expenses:</span>
+                                        <span id="settleTotal">₹0</span>
+                                    </div>
+                                    <div class="calc-row">
+                                        <span>Each Share (50%):</span>
+                                        <span id="settleEachShare">₹0</span>
+                                    </div>
+                                </div>
+                                
+                                <button id="settleNowBtn" class="btn btn-success btn-full" disabled>
+                                    <i class="fas fa-check"></i>
+                                    <span>Settle Now</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div id="historyTab" class="tab-content">
+                    <div class="section-header">
+                        <h2><i class="fas fa-history"></i> Settlement History</h2>
+                    </div>
+                    
+                    <div id="settlementHistory" class="settlement-history">
+                        <div class="empty-state">
+                            <i class="fas fa-history"></i>
+                            <p>No settlements yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation (Mobile) -->
+        <nav class="bottom-nav">
+            <button class="bottom-nav-btn active" data-tab="expenses">
+                <i class="fas fa-receipt"></i>
+                <span>Expenses</span>
+            </button>
+            <button class="bottom-nav-btn" data-tab="add">
+                <i class="fas fa-plus-circle"></i>
+                <span>Add</span>
+            </button>
+            <button class="bottom-nav-btn" data-tab="settle">
+                <i class="fas fa-handshake"></i>
+                <span>Settle</span>
+            </button>
+            <button class="bottom-nav-btn" data-tab="history">
+                <i class="fas fa-history"></i>
+                <span>History</span>
+            </button>
+        </nav>
+        <!-- M2Agency Footer -->
+        <footer class="m2-footer">
+            <p>
+                Made with ❤️ by 
+                <a href="https://www.instagram.com/mohin_m2?igsh=MW9sejY4bGRzcWY4bA==" target="_blank">M2Agency</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- ADMIN VIEW (For Admin Only) -->
+    <!-- ============================================ -->
+    <div id="adminView" class="page hidden">
+        <!-- Admin Header -->
+        <header class="app-header admin-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <i class="fas fa-user-shield"></i>
+                    <h1>Admin Panel</h1>
+                </div>
+                <div class="header-right">
+                    <div class="live-indicator">
+                        <span class="live-dot"></span>
+                        <span>Live</span>
+                    </div>
+                    <span class="admin-badge">ADMIN</span>
+                    <button id="adminLogoutBtn" class="btn btn-icon" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Content -->
+        <main class="main-content">
+            <!-- Admin Stats Cards -->
+            <section class="dashboard-cards admin-cards">
+                <div class="card summary-card admin-card-total">
+                    <div class="card-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Total Expenses</h3>
+                        <p class="amount" id="adminTotalExpenses">₹0</p>
+                        <p class="sub-text" id="adminExpenseCount">0 transactions</p>
+                    </div>
+                </div>
+                
+                <div class="card summary-card admin-card-tarun">
+                    <div class="card-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Tarun's Total</h3>
+                        <p class="amount" id="adminTarunTotal">₹0</p>
+                    </div>
+                </div>
+                
+                <div class="card summary-card admin-card-fazal">
+                    <div class="card-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Fazal's Total</h3>
+                        <p class="amount" id="adminFazalTotal">₹0</p>
+                    </div>
+                </div>
+                
+                <div class="card summary-card admin-card-balance">
+                    <div class="card-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Current Balance</h3>
+                        <p class="amount" id="adminBalance">₹0</p>
+                        <p class="balance-text" id="adminBalanceText">-</p>
+                    </div>
+                </div>
+
+                <div class="card summary-card admin-card-share">
+                    <div class="card-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Each Share</h3>
+                        <p class="amount" id="adminEachShare">₹0</p>
+                        <p class="sub-text">50% split</p>
+                    </div>
+                </div>
+
+                <div class="card summary-card admin-card-settlements">
+                    <div class="card-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Settlements</h3>
+                        <p class="amount" id="adminSettlementCount">0</p>
+                        <p class="sub-text">completed</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Admin Users Section -->
+            <div class="admin-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-users"></i> Registered Users</h2>
+                </div>
+                <div id="adminUsersList" class="admin-users-list">
+                    <!-- Users will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Admin Expenses Section -->
+            <div class="admin-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-receipt"></i> All Expenses (Unsettled)</h2>
+                    <span class="section-badge" id="adminExpenseBadge">0</span>
+                </div>
+                <div id="adminExpensesList" class="expenses-list">
+                    <div class="empty-state">
+                        <i class="fas fa-receipt"></i>
+                        <p>No expenses yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Settlements Section -->
+            <div class="admin-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-history"></i> Settlement History</h2>
+                    <span class="section-badge" id="adminSettlementBadge">0</span>
+                </div>
+                <div id="adminSettlementsList" class="settlement-history">
+                    <div class="empty-state">
+                        <i class="fas fa-history"></i>
+                        <p>No settlements yet.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <footer class="m2-footer">
+            <p>
+                Made with ❤️ by 
+                <a href="https://www.instagram.com/mohin_m2?igsh=MW9sejY4bGRzcWY4bA==" target="_blank">M2Agency</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden">
+        <i class="toast-icon fas fa-check-circle"></i>
+        <span class="toast-message"></span>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3 id="modalTitle">Confirm Action</h3>
+            </div>
+            <p id="modalMessage">Are you sure you want to proceed?</p>
+            <div class="modal-actions">
+                <button id="modalCancel" class="btn btn-secondary">Cancel</button>
+                <button id="modalConfirm" class="btn btn-danger">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
